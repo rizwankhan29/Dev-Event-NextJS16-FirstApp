@@ -1,12 +1,13 @@
 import BookEvent from "@/app/components/BookEvent";
 import EventCard from "@/app/components/EventCard";
 import { IEvent } from "@/database";
-import { getSimilarEventsBySlug } from "@/lib/actions/event.action";
+import {
+  getEventBySlug,
+  getSimilarEventsBySlug,
+} from "@/lib/actions/event.action";
 import { cacheLife } from "next/cache";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-
-export const dynamic = "force-dynamic";
 
 const EventDetailItem = ({
   icon,
@@ -100,22 +101,14 @@ const EventDetailsPage = async ({
 
   const { slug } = await params;
 
-  // Safe BASE_URL fallback
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  // 1. Fetch single event directly
+  const event = await getEventBySlug(slug);
 
-  const request = await fetch(`${baseUrl}/api/events/${slug}`, {
-    cache: "no-store",
-  });
-
-  // Guard against HTML error pages (404/500)
-  if (!request.ok) return notFound();
-
-  const data = await request.json();
-
-  if (!data?.event) return notFound();
+  if (!event || !event.title) return notFound();
 
   const {
-    id,
+    _id,
+    id = _id,
     title,
     description,
     image,
@@ -128,10 +121,9 @@ const EventDetailsPage = async ({
     audience,
     tags,
     organizer,
-  } = data.event;
+  } = event;
 
-  if (!title) return notFound();
-
+  // 2. Define bookings and similarEvents
   const bookings = 10;
   const similarEvents: IEvent[] = await getSimilarEventsBySlug(slug);
 
@@ -197,7 +189,7 @@ const EventDetailsPage = async ({
               <p className="text-sm">Be the first to book your spot!</p>
             )}
 
-            <BookEvent eventId={id} slug={slug} />
+            <BookEvent eventId={String(id)} slug={slug} />
           </div>
         </div>
       </div>
@@ -206,7 +198,8 @@ const EventDetailsPage = async ({
       <div className="flex w-full flex-col gap-2 pt-20">
         <h2>Similar Events</h2>
         <div className="events">
-          {similarEvents.length > 0 &&
+          {similarEvents &&
+            similarEvents.length > 0 &&
             similarEvents.map((similarEvent: IEvent) => (
               <EventCard
                 key={similarEvent.slug || similarEvent.title}
