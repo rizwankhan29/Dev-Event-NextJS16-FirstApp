@@ -4,6 +4,8 @@ import { events } from "../lib/constants";
 import { IEvent } from "../database/event.model";
 import { cacheLife } from "next/cache";
 
+export const dynamic = "force-dynamic";
+
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
 const page = async () => {
